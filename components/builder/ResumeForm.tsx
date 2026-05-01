@@ -132,14 +132,24 @@ export function ResumeForm({
                 onChange={(v) => updateResumeData("linkedin", v)}
                 placeholder="linkedin.com/in/johndoe"
               />
-              <div className="md:col-span-2">
-                <InputField
-                  label="Portfolio URL / Website"
-                  value={resumeData.portfolio || ""}
-                  onChange={(v) => updateResumeData("portfolio", v)}
-                  placeholder="johndoe.com"
-                />
-              </div>
+              <InputField
+                label="Portfolio URL / Website"
+                value={resumeData.portfolio || ""}
+                onChange={(v) => updateResumeData("portfolio", v)}
+                placeholder="johndoe.com"
+              />
+              <InputField
+                label="Github URL"
+                value={resumeData.github || ""}
+                onChange={(v) => updateResumeData("github", v)}
+                placeholder="github.com/johndoe"
+              />
+              <InputField
+                label="Twitter URL"
+                value={resumeData.twitter || ""}
+                onChange={(v) => updateResumeData("twitter", v)}
+                placeholder="twitter.com/johndoe"
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700">
@@ -399,6 +409,18 @@ export function ResumeForm({
                         }}
                         placeholder="e.g. React, TypeScript, Node.js"
                       />
+                      <div className="md:col-span-2">
+                        <InputField
+                          label="Live / Demo Link"
+                          value={project.link || ""}
+                          onChange={(v) => {
+                            const newList = [...(resumeData.projects || [])];
+                            newList[pIdx].link = v;
+                            updateResumeData("projects", newList);
+                          }}
+                          placeholder="e.g. https://demo.example.com"
+                        />
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 px-2">
                       <input

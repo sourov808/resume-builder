@@ -23,7 +23,7 @@ export function ProfessionalTemplate({ data, accentColor }: TemplateProps) {
       <header className={styles.header}>
         <h1 className={styles.name}>{data.name}</h1>
         <p className={styles.role} style={{ color: accentColor }}>{data.target_role}</p>
-        <div className="flex justify-center gap-10 mt-6 text-xs font-bold uppercase tracking-[0.2em] opacity-60">
+        <div className="flex flex-wrap justify-center gap-x-10 gap-y-2 mt-4 text-xs font-bold uppercase tracking-[0.2em] opacity-60">
           <span>{data.email}</span>
           <span>&bull;</span>
           <span>{data.phone}</span>
@@ -33,17 +33,41 @@ export function ProfessionalTemplate({ data, accentColor }: TemplateProps) {
               <span>{data.location}</span>
             </>
           )}
+          {data.linkedin && (
+            <>
+              <span>&bull;</span>
+              <span>{data.linkedin.replace('https://', '').replace('www.', '')}</span>
+            </>
+          )}
+          {data.portfolio && (
+            <>
+              <span>&bull;</span>
+              <span>{data.portfolio.replace('https://', '').replace('www.', '')}</span>
+            </>
+          )}
+          {data.github && (
+            <>
+              <span>&bull;</span>
+              <span>{data.github.replace('https://', '').replace('www.', '')}</span>
+            </>
+          )}
+          {data.twitter && (
+            <>
+              <span>&bull;</span>
+              <span>{data.twitter.replace('https://', '').replace('www.', '')}</span>
+            </>
+          )}
         </div>
       </header>
 
-      <div className="space-y-8">
+      <div className="space-y-6">
 
         {data.objective && (
           <section>
             <h2 className={styles.sectionTitle} style={{ borderColor: accentColor }}>
               Summary
             </h2>
-            <p className="text-base leading-relaxed text-slate-700 font-medium">{data.objective}</p>
+            <p className="text-sm leading-relaxed text-slate-700 font-medium">{data.objective}</p>
           </section>
         )}
 
@@ -53,17 +77,24 @@ export function ProfessionalTemplate({ data, accentColor }: TemplateProps) {
             <h2 className={styles.sectionTitle} style={{ borderColor: accentColor }}>
               Experience
             </h2>
-            <div className="space-y-10">
+            <div className="space-y-6">
               {data.projects.map((p, i) => (
                 <div key={i}>
-                  <div className="flex justify-between items-baseline mb-3">
-                    <h3 className="font-black text-xl uppercase tracking-tight">{p.title}</h3>
-                    <span className="text-xs font-bold opacity-40 uppercase tracking-widest">{p.technologies}</span>
+                  <div className="flex justify-between items-start mb-2 gap-4">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <h3 className="font-black text-lg uppercase tracking-tight">{p.title}</h3>
+                      {p.link && (
+                        <a href={p.link.startsWith('http') ? p.link : `https://${p.link}`} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold underline opacity-40 hover:opacity-100 transition-opacity uppercase tracking-widest mt-1">
+                          [Live Demo]
+                        </a>
+                      )}
+                    </div>
+                    <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest text-right max-w-[50%] leading-relaxed">{p.technologies}</span>
                   </div>
-                  <ul className="space-y-2">
+                  <ul className="space-y-1">
                     {p.highlights?.filter(h => h.trim()).map((h, j) => (
-                      <li key={j} className="text-base flex gap-3 text-slate-700 font-medium">
-                        <span className="text-lg leading-none" style={{ color: accentColor }}>&bull;</span>
+                      <li key={j} className="text-sm flex gap-3 text-slate-700 font-medium">
+                        <span className="text-sm leading-none mt-0.5" style={{ color: accentColor }}>&bull;</span>
                         {h}
                       </li>
                     ))}
@@ -75,39 +106,53 @@ export function ProfessionalTemplate({ data, accentColor }: TemplateProps) {
           </section>
         )}
 
-        <div className="grid grid-cols-2 gap-12">
-          {data.skills && (
-            <section>
-              <h2 className={styles.sectionTitle} style={{ borderColor: accentColor }}>
-                Skills
-              </h2>
-              <div className="space-y-4">
-                {Object.entries(data.skills).map(([key, val]) => (
-                  <div key={key}>
-                    <p className="text-xs font-black uppercase opacity-40 mb-2">{key}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {(Array.isArray(val) ? val : []).filter(s => s.trim()).map((s, idx) => (
-                        <span key={idx} className="text-sm font-bold">{s}{idx < (Array.isArray(val) ? val.filter(item => item.trim()).length : 1) - 1 ? ',' : ''}</span>
-                      ))}
+        <div className="grid grid-cols-2 gap-8">
+          <div className="space-y-6">
+            {data.skills && (
+              <section>
+                <h2 className={styles.sectionTitle} style={{ borderColor: accentColor }}>
+                  Skills
+                </h2>
+                <div className="space-y-3">
+                  {Object.entries(data.skills).map(([key, val]) => (
+                    <div key={key}>
+                      <p className="text-[10px] font-black uppercase opacity-40 mb-1">{key}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {(Array.isArray(val) ? val : []).filter(s => s.trim()).map((s, idx) => (
+                          <span key={idx} className="text-xs font-bold">{s}{idx < (Array.isArray(val) ? val.filter(item => item.trim()).length : 1) - 1 ? ',' : ''}</span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
-            </section>
-          )}
+            {data.languages && data.languages.length > 0 && (
+              <section>
+                <h2 className={styles.sectionTitle} style={{ borderColor: accentColor }}>
+                  Languages
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {data.languages.filter(l => l.trim()).map((l, i) => (
+                    <span key={i} className="text-xs font-bold">{l}{i < data.languages!.filter(item => item.trim()).length - 1 ? ',' : ''}</span>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
 
           {data.education && (
             <section>
               <h2 className={styles.sectionTitle} style={{ borderColor: accentColor }}>
                 Education
               </h2>
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {data.education.map((e, i) => (
                   <div key={i}>
-                    <h3 className="font-black text-base uppercase">{e.degree}</h3>
-                    <p className="text-sm font-bold opacity-40">{e.institution}</p>
-                    <p className="text-xs font-black mt-1" style={{ color: accentColor }}>{e.year}</p>
+                    <h3 className="font-black text-sm uppercase">{e.degree}</h3>
+                    <p className="text-xs font-bold opacity-40">{e.institution}</p>
+                    <p className="text-[10px] font-black mt-1" style={{ color: accentColor }}>{e.year}</p>
                   </div>
                 ))}
               </div>

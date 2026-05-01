@@ -3,6 +3,7 @@ export interface Project {
   technologies: string;
   highlights: string[];
   is_current?: boolean;
+  link?: string;
 }
 
 export interface Education {
@@ -23,6 +24,8 @@ export interface ResumeData {
   location?: string;
   linkedin?: string;
   portfolio?: string;
+  github?: string;
+  twitter?: string;
   objective?: string;
   skills?: Record<string, string[] | string>;
   languages?: string[];

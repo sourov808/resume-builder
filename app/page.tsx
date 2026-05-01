@@ -208,8 +208,7 @@ export default function ResumeBuilder() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           messages: [
-            { role: "system", content: "You are a professional resume architect. Take the provided raw data and refine the professional summary (objective) and project highlights to be high-impact, ATS-optimized, and professional. Return the full JSON including the refinements." },
-            { role: "user", content: `Please refine this resume data: ${JSON.stringify(resumeData)}` }
+            { role: "user", content: `Please refine this resume data and output only the generated JSON: ${JSON.stringify(resumeData)}` }
           ] 
         }),
       });
