@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, Loader2, ChevronRight, AlertCircle, ShieldCheck } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 
 interface AuthFormProps {
   mode: "login" | "signup";
@@ -27,6 +28,9 @@ export default function AuthForm({ mode }: AuthFormProps) {
       if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        toast.success("Welcome back!", {
+          description: "Successfully signed in to your account."
+        });
         router.push("/");
       } else {
         const { error } = await supabase.auth.signUp({ 
@@ -38,11 +42,18 @@ export default function AuthForm({ mode }: AuthFormProps) {
           }
         });
         if (error) throw error;
-        alert("Success! Please check your email to verify your account.");
+        toast.info("Verification Required", {
+          description: "Please check your email to verify your account.",
+          duration: 10000,
+        });
         router.push("/login");
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An unknown error occurred");
+      const message = err instanceof Error ? err.message : "An unknown error occurred";
+      setError(message);
+      toast.error("Authentication Error", {
+        description: message
+      });
     } finally {
       setIsLoading(false);
     }

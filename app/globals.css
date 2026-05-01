@@ -1,41 +1,39 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #ffffff;
-  --color-foreground: #0f172a;
   --color-primary: #2563eb;
-  --color-primary-foreground: #ffffff;
-  --color-secondary: #f8fafc;
-  --color-muted: #64748b;
-  --color-muted-foreground: #94a3b8;
-  --color-accent: #f1f5f9;
+  --color-secondary: #f1f5f9;
+  --color-accent: #3b82f6;
   --color-border: #e2e8f0;
-  --color-ring: #3b82f6;
-  --color-destructive: #ef4444;
 }
 
 @layer base {
   body {
-    @apply bg-background text-foreground antialiased;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    @apply bg-slate-50 text-slate-900 antialiased;
   }
 }
 
 @layer components {
   .card-standard {
-    @apply bg-white border border-border rounded-xl shadow-sm;
+    @apply bg-white border border-slate-200 rounded-xl shadow-sm;
   }
   
+  /* Make primary button very distinct */
   .btn-primary {
-    @apply bg-primary text-primary-foreground px-6 py-3 rounded-lg font-semibold hover:bg-primary/90 transition-all active:scale-[0.98] disabled:opacity-50;
+    @apply bg-blue-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-blue-700 transition-all active:scale-[0.98] shadow-lg shadow-blue-600/20 flex items-center justify-center;
   }
 
+  /* Make secondary button have a clear border and distinct hover state */
   .btn-secondary {
-    @apply bg-secondary text-foreground border border-border px-6 py-3 rounded-lg font-semibold hover:bg-accent transition-all active:scale-[0.98];
+    @apply bg-white text-slate-700 border-2 border-slate-200 px-8 py-4 rounded-xl font-bold hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-[0.98] flex items-center justify-center;
   }
 
   .input-standard {
-    @apply w-full bg-white border border-border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-medium;
+    @apply w-full bg-white border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all text-sm font-semibold text-slate-900;
+  }
+
+  .textarea-standard {
+    @apply w-full bg-white border border-slate-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all text-sm font-semibold text-slate-900 min-h-[100px] resize-y;
   }
 }
 

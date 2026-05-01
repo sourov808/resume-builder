@@ -24,12 +24,14 @@ import {
   Cloud,
   LogOut,
   LogIn,
-  FileText
+  FileText,
+  ArrowLeft
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 interface Project {
   title: string;
@@ -50,10 +52,13 @@ interface ResumeData {
   email: string;
   phone: string;
   location?: string;
+  linkedin?: string;
+  portfolio?: string;
   objective?: string;
   skills?: Record<string, string[] | string>;
   languages?: string[];
   certifications?: { name: string; issuer: string; year: string }[];
+  awards?: { title: string; issuer: string; year: string }[];
   projects?: Project[];
   education?: Education[];
 }
@@ -95,13 +100,19 @@ export default function ResumeBuilder() {
     email: "",
     phone: "",
     location: "",
+    linkedin: "",
+    portfolio: "",
     objective: "",
-    skills: { "Technical Skills": [] },
+    skills: { "Technical Skills": [], "Soft Skills": [] },
     projects: [{ title: "", technologies: "", highlights: [""] }],
     education: [{ degree: "", institution: "", year: "", location: "" }],
     languages: [""],
-    certifications: [{ name: "", issuer: "", year: "" }]
+    certifications: [{ name: "", issuer: "", year: "" }],
+    awards: [{ title: "", issuer: "", year: "" }]
   });
+
+  const [bulkSkills, setBulkSkills] = useState<{ [key: string]: string }>({});
+  const [showBulkAdd, setShowBulkAdd] = useState<{ [key: string]: boolean }>({});
   
   const [template, setTemplate] = useState<"Modern" | "Professional" | "Creative" | "Minimal">("Modern");
   const [accentColor, setAccentColor] = useState("#2563eb");
@@ -138,9 +149,15 @@ export default function ResumeBuilder() {
       });
       if (error) throw error;
       setSaveStatus("saved");
+      toast.success("Saved to Cloud", {
+        description: "Your resume has been successfully saved to your profile."
+      });
       setTimeout(() => setSaveStatus("idle"), 3000);
     } catch (err) {
       console.error("Error saving to cloud:", err);
+      toast.error("Save Failed", {
+        description: "There was an error saving your resume. Please try again."
+      });
     } finally {
       setIsSaving(false);
     }
@@ -172,6 +189,24 @@ export default function ResumeBuilder() {
       current[keys[keys.length - 1]] = value;
       return newData;
     });
+  };
+
+  const handleBulkAdd = (category: string) => {
+    const skillsToAdd = (bulkSkills[category] || "")
+      .split(/[,\n]/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+    
+    if (skillsToAdd.length === 0) return;
+
+    const currentSkills = Array.isArray(resumeData.skills?.[category]) 
+      ? resumeData.skills[category] as string[] 
+      : [];
+      
+    updateResumeData(`skills.${category}`, [...currentSkills, ...skillsToAdd]);
+    setBulkSkills(prev => ({ ...prev, [category]: "" }));
+    setShowBulkAdd(prev => ({ ...prev, [category]: false }));
+    toast.success(`Added ${skillsToAdd.length} skills to ${category}`);
   };
 
   const handleSynthesize = async () => {
@@ -209,6 +244,15 @@ export default function ResumeBuilder() {
       {/* Header */}
       <header className="w-full bg-white border-b border-slate-200 py-4 px-6 md:px-12 flex justify-between items-center sticky top-0 z-50 shadow-sm">
         <div className="flex items-center gap-3">
+          {step !== "landing" && (
+            <button 
+              onClick={() => setStep("landing")}
+              className="mr-2 p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              title="Back to Landing"
+            >
+              <ArrowLeft className="w-5 h-5 text-slate-500" />
+            </button>
+          )}
           <div className="w-8 h-8 rounded bg-blue-600 flex items-center justify-center">
             <FileText className="w-5 h-5 text-white" />
           </div>
@@ -216,19 +260,29 @@ export default function ResumeBuilder() {
         </div>
         <div className="flex items-center gap-4">
           {user ? (
-            <div className="flex items-center gap-4">
-              <span className="hidden sm:block text-sm font-medium text-slate-600">{user.email}</span>
+            <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
+              <div className="flex flex-col items-end mr-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Account</span>
+                <span className="text-sm font-bold text-slate-900 truncate max-w-[150px]">{user.email}</span>
+              </div>
+              <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center border border-blue-200 shadow-sm">
+                <User className="w-5 h-5 text-blue-600" />
+              </div>
               <button 
-                onClick={() => supabase.auth.signOut()} 
-                className="text-sm font-semibold text-slate-900 hover:text-blue-600 transition-colors flex items-center gap-2"
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  toast.success("Signed out successfully");
+                }} 
+                className="ml-2 p-2 text-slate-400 hover:text-red-600 transition-colors"
+                title="Sign Out"
               >
-                <LogOut className="w-4 h-4" /> Sign Out
+                <LogOut className="w-5 h-5" />
               </button>
             </div>
           ) : (
             <button 
               onClick={() => router.push("/login")} 
-              className="text-sm font-semibold bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition-all"
+              className="text-sm font-bold bg-slate-900 text-white px-5 py-2.5 rounded-lg hover:bg-slate-800 transition-all shadow-sm"
             >
               Sign In
             </button>
@@ -248,16 +302,23 @@ export default function ResumeBuilder() {
             >
               <div className="text-center max-w-3xl mb-24 mt-12">
                 <h1 className="text-4xl md:text-6xl font-extrabold text-slate-900 mb-6 tracking-tight leading-[1.1]">
-                  Build a resume that gets you <span className="text-blue-600">hired.</span>
+                  {user ? (
+                    <>Welcome back, <span className="text-blue-600">{user.email?.split('@')[0]}</span></>
+                  ) : (
+                    <>Build a resume that gets you <span className="text-blue-600">hired.</span></>
+                  )}
                 </h1>
                 <p className="text-lg text-slate-600 mb-10 leading-relaxed">
-                  Professional, ATS-optimized resumes designed by AI. Choose a template, enter your details, and download your high-quality resume in minutes.
+                  {user 
+                    ? "You're logged in and ready to create your next career-defining document. Pick up where you left off or start fresh."
+                    : "Professional, ATS-optimized resumes designed by AI. Choose a template, enter your details, and download your high-quality resume in minutes."
+                  }
                 </p>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                  <button onClick={handleStart} className="btn-primary w-full sm:w-auto">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-6 relative z-10">
+                  <button onClick={handleStart} className="btn-primary w-full sm:w-[200px]">
                     Create My Resume
                   </button>
-                  <button onClick={scrollToTemplates} className="btn-secondary w-full sm:w-auto">
+                  <button onClick={scrollToTemplates} className="btn-secondary w-full sm:w-[200px]">
                     View Templates
                   </button>
                 </div>
@@ -327,12 +388,16 @@ export default function ResumeBuilder() {
                       {activeFormStep === 0 && (
                         <div className="space-y-8">
                           <SectionHeader title="Contact Information" desc="Provide your basic details so employers can reach you." />
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                             <InputField label="Full Name" value={resumeData.name} onChange={v => updateResumeData('name', v)} placeholder="John Doe" />
                             <InputField label="Target Job Title" value={resumeData.target_role} onChange={v => updateResumeData('target_role', v)} placeholder="Senior Product Designer" />
                             <InputField label="Email Address" value={resumeData.email} onChange={v => updateResumeData('email', v)} placeholder="john.doe@example.com" />
                             <InputField label="Phone Number" value={resumeData.phone} onChange={v => updateResumeData('phone', v)} placeholder="+1 (555) 000-0000" />
                             <InputField label="Location" value={resumeData.location || ''} onChange={v => updateResumeData('location', v)} placeholder="New York, NY" />
+                            <InputField label="LinkedIn URL" value={resumeData.linkedin || ''} onChange={v => updateResumeData('linkedin', v)} placeholder="linkedin.com/in/johndoe" />
+                            <div className="md:col-span-2">
+                              <InputField label="Portfolio URL / Website" value={resumeData.portfolio || ''} onChange={v => updateResumeData('portfolio', v)} placeholder="johndoe.com" />
+                            </div>
                           </div>
                           <div className="space-y-2">
                             <label className="text-sm font-semibold text-slate-700">Professional Summary</label>
@@ -340,7 +405,7 @@ export default function ResumeBuilder() {
                               value={resumeData.objective} 
                               onChange={e => updateResumeData('objective', e.target.value)}
                               placeholder="Write a brief overview of your professional background and key achievements..."
-                              className="w-full bg-white border border-slate-200 rounded-lg px-4 py-3 min-h-[120px] focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 font-medium text-slate-900 transition-all"
+                              className="textarea-standard"
                             />
                           </div>
                         </div>
@@ -349,43 +414,67 @@ export default function ResumeBuilder() {
                       {activeFormStep === 1 && (
                         <div className="space-y-8">
                           <SectionHeader title="Skills & Expertise" desc="Highlight your core competencies and technical skills." />
-                          <div className="space-y-6">
+                          <div className="space-y-10">
                             {Object.entries(resumeData.skills || {}).map(([category, list]) => (
-                              <div key={category} className="space-y-4">
-                                <label className="text-xs font-bold uppercase tracking-wider text-slate-400">{category}</label>
-                                <div className="flex flex-wrap gap-2">
-                                  {(Array.isArray(list) ? list : []).map((skill, idx) => (
-                                    <div key={idx} className="group relative">
-                                      <input 
-                                        value={skill}
-                                        onChange={e => {
-                                          const newList = [...(Array.isArray(list) ? list : [])];
-                                          newList[idx] = e.target.value;
-                                          updateResumeData(`skills.${category}`, newList);
-                                        }}
-                                        className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-blue-600 min-w-[120px]"
-                                      />
-                                      <button 
-                                        onClick={() => {
-                                          const newList = (Array.isArray(list) ? list : []).filter((_, i) => i !== idx);
-                                          updateResumeData(`skills.${category}`, newList);
-                                        }}
-                                        className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-slate-900 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                      >
-                                        <X className="w-2.5 h-2.5" />
-                                      </button>
-                                    </div>
-                                  ))}
+                              <div key={category} className="space-y-4 bg-slate-50 p-6 rounded-xl border border-slate-200">
+                                <div className="flex justify-between items-center mb-2">
+                                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">{category}</label>
                                   <button 
-                                    onClick={() => {
-                                      const newList = [...(Array.isArray(list) ? list : []), ""];
-                                      updateResumeData(`skills.${category}`, newList);
-                                    }}
-                                    className="px-3 py-1.5 rounded-lg border border-dashed border-slate-300 hover:border-blue-600 text-xs font-bold text-slate-500 hover:text-blue-600 transition-all flex items-center gap-1"
+                                    onClick={() => setShowBulkAdd(prev => ({ ...prev, [category]: !prev[category] }))}
+                                    className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
                                   >
-                                    <Plus className="w-3 h-3" /> Add Skill
+                                    <Zap className="w-3 h-3" /> {showBulkAdd[category] ? "Close Bulk Add" : "Bulk Add Skills"}
                                   </button>
                                 </div>
+
+                                {showBulkAdd[category] ? (
+                                  <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                                    <textarea 
+                                      value={bulkSkills[category] || ""}
+                                      onChange={e => setBulkSkills(prev => ({ ...prev, [category]: e.target.value }))}
+                                      placeholder="Paste skills separated by commas or new lines (e.g. React, TypeScript, Node.js)"
+                                      className="textarea-standard min-h-[80px]"
+                                    />
+                                    <div className="flex gap-2">
+                                      <button onClick={() => handleBulkAdd(category)} className="btn-primary py-2 px-4 text-xs">Add All</button>
+                                      <button onClick={() => setShowBulkAdd(prev => ({ ...prev, [category]: false }))} className="btn-secondary py-2 px-4 text-xs">Cancel</button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-wrap gap-2">
+                                    {(Array.isArray(list) ? list : []).map((skill, idx) => (
+                                      <div key={idx} className="group relative">
+                                        <input 
+                                          value={skill}
+                                          onChange={e => {
+                                            const newList = [...(Array.isArray(list) ? list : [])];
+                                            newList[idx] = e.target.value;
+                                            updateResumeData(`skills.${category}`, newList);
+                                          }}
+                                          className="bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm font-semibold focus:outline-none focus:border-blue-600 min-w-[140px]"
+                                        />
+                                        <button 
+                                          onClick={() => {
+                                            const newList = (Array.isArray(list) ? list : []).filter((_, i) => i !== idx);
+                                            updateResumeData(`skills.${category}`, newList);
+                                          }}
+                                          className="absolute -top-2 -right-2 w-5 h-5 bg-slate-900 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                                        >
+                                          <X className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                    ))}
+                                    <button 
+                                      onClick={() => {
+                                        const newList = [...(Array.isArray(list) ? list : []), ""];
+                                        updateResumeData(`skills.${category}`, newList);
+                                      }}
+                                      className="px-4 py-2 rounded-lg border-2 border-dashed border-slate-200 hover:border-blue-600 text-xs font-bold text-slate-500 hover:text-blue-600 transition-all flex items-center gap-2 bg-white"
+                                    >
+                                      <Plus className="w-4 h-4" /> Add One
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -455,44 +544,82 @@ export default function ResumeBuilder() {
                       )}
 
                       {activeFormStep === 3 && (
-                        <div className="space-y-8">
-                          <div className="flex justify-between items-end">
-                            <SectionHeader title="Education" desc="Detail your academic background and degrees." />
-                            <button onClick={() => updateResumeData('education', [...(resumeData.education || []), { degree: "", institution: "", year: "", location: "" }])} className="btn-secondary text-xs py-2 px-4 flex items-center gap-2">
-                              <Plus className="w-4 h-4" /> Add Education
-                            </button>
+                        <div className="space-y-12">
+                          <div className="space-y-8">
+                            <div className="flex justify-between items-end">
+                              <SectionHeader title="Education" desc="Detail your academic background and degrees." />
+                              <button onClick={() => updateResumeData('education', [...(resumeData.education || []), { degree: "", institution: "", year: "", location: "" }])} className="btn-secondary text-xs py-2 px-4 flex items-center gap-2">
+                                <Plus className="w-4 h-4" /> Add Education
+                              </button>
+                            </div>
+                            <div className="space-y-6">
+                              {(resumeData.education || []).map((edu, eIdx) => (
+                                <div key={eIdx} className="bg-slate-50 p-6 rounded-xl border border-slate-200 relative grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                                  <button 
+                                    onClick={() => updateResumeData('education', (resumeData.education || []).filter((_, i) => i !== eIdx))}
+                                    className="absolute top-4 right-4 text-slate-400 hover:text-red-600 transition-colors"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                  <InputField label="Degree / Certificate" value={edu.degree} onChange={v => {
+                                    const newList = [...(resumeData.education || [])];
+                                    newList[eIdx].degree = v;
+                                    updateResumeData('education', newList);
+                                  }} placeholder="B.S. in Computer Science" />
+                                  <InputField label="Institution" value={edu.institution} onChange={v => {
+                                    const newList = [...(resumeData.education || [])];
+                                    newList[eIdx].institution = v;
+                                    updateResumeData('education', newList);
+                                  }} placeholder="University of Oxford" />
+                                  <InputField label="Time Period" value={edu.year} onChange={v => {
+                                    const newList = [...(resumeData.education || [])];
+                                    newList[eIdx].year = v;
+                                    updateResumeData('education', newList);
+                                  }} placeholder="2018 - 2022" />
+                                  <InputField label="Location" value={edu.location} onChange={v => {
+                                    const newList = [...(resumeData.education || [])];
+                                    newList[eIdx].location = v;
+                                    updateResumeData('education', newList);
+                                  }} placeholder="London, UK" />
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                          <div className="space-y-6">
-                            {(resumeData.education || []).map((edu, eIdx) => (
-                              <div key={eIdx} className="bg-slate-50 p-6 rounded-xl border border-slate-200 relative grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <button 
-                                  onClick={() => updateResumeData('education', (resumeData.education || []).filter((_, i) => i !== eIdx))}
-                                  className="absolute top-4 right-4 text-slate-400 hover:text-red-600 transition-colors"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                                <InputField label="Degree / Certificate" value={edu.degree} onChange={v => {
-                                  const newList = [...(resumeData.education || [])];
-                                  newList[eIdx].degree = v;
-                                  updateResumeData('education', newList);
-                                }} placeholder="B.S. in Computer Science" />
-                                <InputField label="Institution" value={edu.institution} onChange={v => {
-                                  const newList = [...(resumeData.education || [])];
-                                  newList[eIdx].institution = v;
-                                  updateResumeData('education', newList);
-                                }} placeholder="University of Oxford" />
-                                <InputField label="Time Period" value={edu.year} onChange={v => {
-                                  const newList = [...(resumeData.education || [])];
-                                  newList[eIdx].year = v;
-                                  updateResumeData('education', newList);
-                                }} placeholder="2018 - 2022" />
-                                <InputField label="Location" value={edu.location} onChange={v => {
-                                  const newList = [...(resumeData.education || [])];
-                                  newList[eIdx].location = v;
-                                  updateResumeData('education', newList);
-                                }} placeholder="London, UK" />
-                              </div>
-                            ))}
+
+                          <div className="space-y-8 pt-10 border-t border-slate-100">
+                            <div className="flex justify-between items-end">
+                              <SectionHeader title="Awards & Honors" desc="Highlight your professional recognitions." />
+                              <button onClick={() => updateResumeData('awards', [...(resumeData.awards || []), { title: "", issuer: "", year: "" }])} className="btn-secondary text-xs py-2 px-4 flex items-center gap-2">
+                                <Plus className="w-4 h-4" /> Add Award
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                              {(resumeData.awards || []).map((award, aIdx) => (
+                                <div key={aIdx} className="bg-slate-50 p-6 rounded-xl border border-slate-200 relative space-y-4">
+                                  <button 
+                                    onClick={() => updateResumeData('awards', (resumeData.awards || []).filter((_, i) => i !== aIdx))}
+                                    className="absolute top-4 right-4 text-slate-400 hover:text-red-600 transition-colors"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                  <InputField label="Award Title" value={award.title} onChange={v => {
+                                    const newList = [...(resumeData.awards || [])];
+                                    newList[aIdx].title = v;
+                                    updateResumeData('awards', newList);
+                                  }} placeholder="Dean's List" />
+                                  <InputField label="Issuer" value={award.issuer} onChange={v => {
+                                    const newList = [...(resumeData.awards || [])];
+                                    newList[aIdx].issuer = v;
+                                    updateResumeData('awards', newList);
+                                  }} placeholder="University of Oxford" />
+                                  <InputField label="Year" value={award.year} onChange={v => {
+                                    const newList = [...(resumeData.awards || [])];
+                                    newList[aIdx].year = v;
+                                    updateResumeData('awards', newList);
+                                  }} placeholder="2022" />
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       )}
@@ -508,13 +635,21 @@ export default function ResumeBuilder() {
                               Review your information and let our AI optimize the wording for maximum professional impact.
                             </p>
                           </div>
-                          <button 
-                            onClick={handleSynthesize}
-                            disabled={isLoading}
-                            className="btn-primary flex items-center gap-2"
-                          >
-                            {isLoading ? "Processing..." : "Generate Professional Resume"} <ChevronRight className="w-5 h-5" />
-                          </button>
+                          <div className="flex items-center gap-4">
+                            <button 
+                              onClick={() => setActiveFormStep(3)}
+                              className="btn-secondary flex items-center gap-2"
+                            >
+                              <ChevronLeft className="w-5 h-5" /> Back to Check
+                            </button>
+                            <button 
+                              onClick={handleSynthesize}
+                              disabled={isLoading}
+                              className="btn-primary flex items-center gap-2"
+                            >
+                              {isLoading ? "Processing..." : "Generate Professional Resume"} <ChevronRight className="w-5 h-5" />
+                            </button>
+                          </div>
                         </div>
                       )}
                     </motion.div>
