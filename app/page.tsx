@@ -25,7 +25,10 @@ import {
   LogOut,
   LogIn,
   FileText,
-  ArrowLeft
+  ArrowLeft,
+  ImagePlus,
+  Upload,
+  Camera
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
@@ -46,6 +49,8 @@ interface Education {
   year: string;
   location: string;
   is_current?: boolean;
+  current_year?: string;
+  expected_graduation?: string;
 }
 
 interface ResumeData {
@@ -63,15 +68,17 @@ interface ResumeData {
   awards?: { title: string; issuer: string; year: string }[];
   projects?: Project[];
   education?: Education[];
+  profile_image?: string;
   is_beginner?: boolean;
 }
 
 const STEPS = [
-  { id: "identity", label: "Identity", icon: User },
-  { id: "skills", label: "Skills", icon: Wrench },
-  { id: "experience", label: "Experience", icon: Briefcase },
-  { id: "education", label: "Education", icon: GraduationCap },
-  { id: "final", label: "Review", icon: Sparkles },
+  { id: 0, title: "Identity", icon: User },
+  { id: 1, title: "Skills", icon: Zap },
+  { id: 2, title: "Experience", icon: Briefcase },
+  { id: 3, title: "Education", icon: GraduationCap },
+  { id: 4, title: "Profile Image", icon: ImagePlus },
+  { id: 5, title: "Ready", icon: Sparkles },
 ];
 
 const TEMPLATES = [
@@ -112,9 +119,11 @@ export default function ResumeBuilder() {
     languages: [""],
     certifications: [{ name: "", issuer: "", year: "" }],
     awards: [{ title: "", issuer: "", year: "" }],
-    is_beginner: false
+    is_beginner: false,
+    profile_image: ""
   });
 
+  const [hasPracticeProjects, setHasPracticeProjects] = useState(false);
   const [bulkSkills, setBulkSkills] = useState<{ [key: string]: string }>({});
   const [showBulkAdd, setShowBulkAdd] = useState<{ [key: string]: boolean }>({});
   
@@ -211,6 +220,22 @@ export default function ResumeBuilder() {
     setBulkSkills(prev => ({ ...prev, [category]: "" }));
     setShowBulkAdd(prev => ({ ...prev, [category]: false }));
     toast.success(`Added ${skillsToAdd.length} skills to ${category}`);
+  };
+
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleImageUpload = (file: File) => {
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("File size exceeds 2MB limit");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      updateResumeData('profile_image', e.target?.result as string);
+      toast.success("Profile image uploaded successfully");
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSynthesize = async () => {
@@ -373,7 +398,7 @@ export default function ResumeBuilder() {
                         {activeFormStep > idx ? <CheckCircle2 className="w-4 h-4" /> : idx + 1}
                       </div>
                       <span className={cn("text-sm font-semibold", activeFormStep === idx ? "text-slate-900" : "text-slate-500")}>
-                        {s.label}
+                        {s.title}
                       </span>
                     </div>
                   ))}
@@ -487,63 +512,141 @@ export default function ResumeBuilder() {
 
                       {activeFormStep === 2 && (
                         <div className="space-y-8">
-                          <div className="flex justify-between items-end">
-                            <SectionHeader title="Work Experience" desc="List your most relevant professional projects and roles." />
-                            <button onClick={() => updateResumeData('projects', [...(resumeData.projects || []), { title: "", technologies: "", highlights: [""] }])} className="btn-secondary text-xs py-2 px-4 flex items-center gap-2">
-                              <Plus className="w-4 h-4" /> Add Experience
-                            </button>
-                          </div>
-                          <div className="space-y-8">
-                            {(resumeData.projects || []).map((project, pIdx) => (
-                              <div key={pIdx} className="bg-slate-50 p-6 rounded-xl border border-slate-200 relative space-y-6">
-                                <button 
-                                  onClick={() => updateResumeData('projects', (resumeData.projects || []).filter((_, i) => i !== pIdx))}
-                                  className="absolute top-4 right-4 text-slate-400 hover:text-red-600 transition-colors"
-                                >
-                                  <Trash2 className="w-4 h-4" />
+                          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+                            <SectionHeader 
+                              title={resumeData.is_beginner ? "Practice & Academic Projects" : "Work Experience"} 
+                              desc={resumeData.is_beginner ? "Showcase projects you've built during study or self-learning." : "List your most relevant professional projects and roles."} 
+                            />
+                            <div className="flex flex-col sm:flex-row gap-4 items-center w-full md:w-auto">
+                              <label className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors w-full sm:w-auto">
+                                <input 
+                                  type="checkbox" 
+                                  checked={resumeData.is_beginner}
+                                  onChange={e => {
+                                    updateResumeData('is_beginner', e.target.checked);
+                                    if (!e.target.checked) setHasPracticeProjects(false);
+                                  }}
+                                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600"
+                                />
+                                <span className="text-xs font-bold text-slate-700">I am a beginner / No experience</span>
+                              </label>
+                              {(!resumeData.is_beginner || (resumeData.is_beginner && hasPracticeProjects)) && (
+                                <button onClick={() => updateResumeData('projects', [...(resumeData.projects || []), { title: "", technologies: "", highlights: [""] }])} className="btn-secondary text-xs py-2 px-4 flex items-center gap-2 w-full sm:w-auto">
+                                  <Plus className="w-4 h-4" /> {resumeData.is_beginner ? "Add Project" : "Add Experience"}
                                 </button>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                  <InputField label="Company / Project Title" value={project.title} onChange={v => {
-                                    const newList = [...(resumeData.projects || [])];
-                                    newList[pIdx].title = v;
-                                    updateResumeData('projects', newList);
-                                  }} placeholder="e.g. Google / Resume Builder" />
-                                  <InputField label="Key Technologies" value={project.technologies} onChange={v => {
-                                    const newList = [...(resumeData.projects || [])];
-                                    newList[pIdx].technologies = v;
-                                    updateResumeData('projects', newList);
-                                  }} placeholder="e.g. React, TypeScript, Node.js" />
-                                </div>
-                                <div className="space-y-3">
-                                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Achievements & Responsibilities</label>
-                                  {project.highlights.map((h, hIdx) => (
-                                    <div key={hIdx} className="flex gap-2">
-                                      <input 
-                                        value={h}
-                                        onChange={e => {
-                                          const newList = [...(resumeData.projects || [])];
-                                          newList[pIdx].highlights[hIdx] = e.target.value;
-                                          updateResumeData('projects', newList);
-                                        }}
-                                        className="flex-1 bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm font-medium focus:outline-none focus:border-blue-600"
-                                        placeholder="Managed a team of 5 engineers to deliver X feature..."
-                                      />
-                                      <button onClick={() => {
-                                        const newList = [...(resumeData.projects || [])];
-                                        newList[pIdx].highlights = newList[pIdx].highlights.filter((_, i) => i !== hIdx);
-                                        updateResumeData('projects', newList);
-                                      }} className="text-slate-400 hover:text-red-600"><X className="w-4 h-4" /></button>
-                                    </div>
-                                  ))}
-                                  <button onClick={() => {
-                                    const newList = [...(resumeData.projects || [])];
-                                    newList[pIdx].highlights.push("");
-                                    updateResumeData('projects', newList);
-                                  }} className="text-xs font-bold text-blue-600 hover:underline">+ Add Point</button>
-                                </div>
-                              </div>
-                            ))}
+                              )}
+                            </div>
                           </div>
+
+                          {resumeData.is_beginner && !hasPracticeProjects && (
+                            <div className="bg-blue-50 border border-blue-100 p-8 rounded-2xl flex flex-col items-center text-center space-y-6">
+                              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                                <Sparkles className="w-6 h-6 text-blue-600" />
+                              </div>
+                              <div className="max-w-md">
+                                <h3 className="text-lg font-bold text-slate-900">Focus on Projects & Skills</h3>
+                                <p className="text-sm text-slate-600 mt-2 font-medium">
+                                  No worries! Since you&apos;re just starting, our AI will emphasize your **Academic Projects**, **Education**, and **Skills** to make your resume stand out.
+                                </p>
+                              </div>
+                              <div className="pt-4 border-t border-blue-100 w-full max-w-xs">
+                                <label className="flex items-center justify-center gap-3 p-4 bg-white border-2 border-blue-200 rounded-xl cursor-pointer hover:border-blue-600 hover:bg-blue-50 transition-all shadow-sm group">
+                                  <input 
+                                    type="checkbox" 
+                                    checked={hasPracticeProjects}
+                                    onChange={e => setHasPracticeProjects(e.target.checked)}
+                                    className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-600"
+                                  />
+                                  <span className="text-sm font-bold text-slate-800 group-hover:text-blue-700">I have practice projects to add</span>
+                                </label>
+                              </div>
+                            </div>
+                          )}
+
+                          {(!resumeData.is_beginner || (resumeData.is_beginner && hasPracticeProjects)) && (
+                            <div className="space-y-8">
+                              {(resumeData.projects || []).map((project, pIdx) => (
+                                <div key={pIdx} className="bg-slate-50 p-6 rounded-xl border border-slate-200 relative space-y-6">
+                                  <button 
+                                    onClick={() => updateResumeData('projects', (resumeData.projects || []).filter((_, i) => i !== pIdx))}
+                                    className="absolute top-4 right-4 text-slate-400 hover:text-red-600 transition-colors"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                                    <InputField 
+                                      label={resumeData.is_beginner ? "Project Title" : "Company / Role Title"} 
+                                      value={project.title} 
+                                      onChange={v => {
+                                        const newList = [...(resumeData.projects || [])];
+                                        newList[pIdx].title = v;
+                                        updateResumeData('projects', newList);
+                                      }} 
+                                      placeholder={resumeData.is_beginner ? "e.g. Personal Portfolio" : "e.g. Google / Senior Engineer"} 
+                                    />
+                                    <InputField label="Key Technologies" value={project.technologies} onChange={v => {
+                                      const newList = [...(resumeData.projects || [])];
+                                      newList[pIdx].technologies = v;
+                                      updateResumeData('projects', newList);
+                                    }} placeholder="e.g. React, TypeScript, Node.js" />
+                                  </div>
+                                  <div className="flex items-center gap-2 px-2">
+                                    <input 
+                                      type="checkbox" 
+                                      id={`project-current-${pIdx}`}
+                                      checked={project.is_current}
+                                      onChange={e => {
+                                        const newList = [...(resumeData.projects || [])];
+                                        newList[pIdx].is_current = e.target.checked;
+                                        updateResumeData('projects', newList);
+                                      }}
+                                      className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600"
+                                    />
+                                    <label htmlFor={`project-current-${pIdx}`} className="text-sm font-semibold text-slate-600 cursor-pointer">
+                                      {resumeData.is_beginner ? "I am currently working on this project" : "I am currently in this role"}
+                                    </label>
+                                  </div>
+                                  <div className="space-y-3">
+                                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                                      {resumeData.is_beginner ? "Project Highlights & Features" : "Achievements & Responsibilities"}
+                                    </label>
+                                    {project.highlights.map((h, hIdx) => (
+                                      <div key={hIdx} className="flex gap-2">
+                                        <textarea 
+                                          value={h}
+                                          onChange={e => {
+                                            const newList = [...(resumeData.projects || [])];
+                                            newList[pIdx].highlights[hIdx] = e.target.value;
+                                            updateResumeData('projects', newList);
+                                          }}
+                                          className="textarea-standard flex-1 min-h-[60px] py-2"
+                                          placeholder={resumeData.is_beginner ? "Implemented real-time chat using Socket.io..." : "Managed a team of 5 engineers..."}
+                                        />
+                                        <button onClick={() => {
+                                          const newList = [...(resumeData.projects || [])];
+                                          newList[pIdx].highlights = newList[pIdx].highlights.filter((_, i) => i !== hIdx);
+                                          updateResumeData('projects', newList);
+                                        }} className="pt-2 text-slate-400 hover:text-red-600"><X className="w-4 h-4" /></button>
+                                      </div>
+                                    ))}
+                                    <button onClick={() => {
+                                      const newList = [...(resumeData.projects || [])];
+                                      newList[pIdx].highlights.push("");
+                                      updateResumeData('projects', newList);
+                                    }} className="text-xs font-bold text-blue-600 hover:underline">+ Add Point</button>
+                                  </div>
+                                </div>
+                              ))}
+                              {resumeData.is_beginner && (
+                                <button 
+                                  onClick={() => setHasPracticeProjects(false)}
+                                  className="text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors"
+                                >
+                                  ← Back to Beginner Guide
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -575,52 +678,55 @@ export default function ResumeBuilder() {
                                     newList[eIdx].institution = v;
                                     updateResumeData('education', newList);
                                   }} placeholder="University of Oxford" />
-                                  <InputField label="Time Period" value={edu.year} onChange={v => {
+                                  <InputField label="Time Period / Graduation" value={edu.year} onChange={v => {
                                     const newList = [...(resumeData.education || [])];
                                     newList[eIdx].year = v;
                                     updateResumeData('education', newList);
                                   }} placeholder="2018 - 2022" />
-                                  <InputField label="Location" value={edu.location} onChange={v => {
-                                    const newList = [...(resumeData.education || [])];
-                                    newList[eIdx].location = v;
-                                    updateResumeData('education', newList);
-                                  }} placeholder="London, UK" />
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="space-y-8 pt-10 border-t border-slate-100">
-                            <div className="flex justify-between items-end">
-                              <SectionHeader title="Awards & Honors" desc="Highlight your professional recognitions." />
-                              <button onClick={() => updateResumeData('awards', [...(resumeData.awards || []), { title: "", issuer: "", year: "" }])} className="btn-secondary text-xs py-2 px-4 flex items-center gap-2">
-                                <Plus className="w-4 h-4" /> Add Award
-                              </button>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                              {(resumeData.awards || []).map((award, aIdx) => (
-                                <div key={aIdx} className="bg-slate-50 p-6 rounded-xl border border-slate-200 relative space-y-4">
-                                  <button 
-                                    onClick={() => updateResumeData('awards', (resumeData.awards || []).filter((_, i) => i !== aIdx))}
-                                    className="absolute top-4 right-4 text-slate-400 hover:text-red-600 transition-colors"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                  <InputField label="Award Title" value={award.title} onChange={v => {
-                                    const newList = [...(resumeData.awards || [])];
-                                    newList[aIdx].title = v;
-                                    updateResumeData('awards', newList);
-                                  }} placeholder="Dean's List" />
-                                  <InputField label="Issuer" value={award.issuer} onChange={v => {
-                                    const newList = [...(resumeData.awards || [])];
-                                    newList[aIdx].issuer = v;
-                                    updateResumeData('awards', newList);
-                                  }} placeholder="University of Oxford" />
-                                  <InputField label="Year" value={award.year} onChange={v => {
-                                    const newList = [...(resumeData.awards || [])];
-                                    newList[aIdx].year = v;
-                                    updateResumeData('awards', newList);
-                                  }} placeholder="2022" />
+                                  <div className="flex flex-col gap-4">
+                                    <InputField label="Location" value={edu.location} onChange={v => {
+                                      const newList = [...(resumeData.education || [])];
+                                      newList[eIdx].location = v;
+                                      updateResumeData('education', newList);
+                                    }} placeholder="London, UK" />
+                                    <label className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                                      <input 
+                                        type="checkbox" 
+                                        checked={edu.is_current}
+                                        onChange={e => {
+                                          const newList = [...(resumeData.education || [])];
+                                          newList[eIdx].is_current = e.target.checked;
+                                          updateResumeData('education', newList);
+                                        }}
+                                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600"
+                                      />
+                                      <span className="text-xs font-bold text-slate-700">Currently studying here</span>
+                                    </label>
+                                  </div>
+                                  {edu.is_current && (
+                                    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 pt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2">
+                                      <InputField 
+                                        label="Current Year / Semester" 
+                                        value={edu.current_year || ''} 
+                                        onChange={v => {
+                                          const newList = [...(resumeData.education || [])];
+                                          newList[eIdx].current_year = v;
+                                          updateResumeData('education', newList);
+                                        }} 
+                                        placeholder="e.g. 3rd Year / 6th Semester" 
+                                      />
+                                      <InputField 
+                                        label="Expected Graduation" 
+                                        value={edu.expected_graduation || ''} 
+                                        onChange={v => {
+                                          const newList = [...(resumeData.education || [])];
+                                          newList[eIdx].expected_graduation = v;
+                                          updateResumeData('education', newList);
+                                        }} 
+                                        placeholder="e.g. June 2026" 
+                                      />
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -629,19 +735,115 @@ export default function ResumeBuilder() {
                       )}
 
                       {activeFormStep === 4 && (
-                        <div className="flex flex-col items-center justify-center text-center py-12 space-y-6">
-                          <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
-                            <Sparkles className="w-8 h-8 text-blue-600" />
+                        <div className="space-y-8">
+                          <div className="flex justify-between items-start">
+                            <SectionHeader title="Profile Image" desc="Add a professional photo to your resume." />
+                            <div className="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                              Optional
+                            </div>
                           </div>
-                          <div className="max-w-md">
-                            <h2 className="text-2xl font-bold text-slate-900 mb-2">Ready to Build</h2>
-                            <p className="text-slate-500 font-medium leading-relaxed">
+                          
+                          <div className="flex flex-col items-center space-y-8 py-6">
+                            <div className="relative group">
+                              <div className="w-40 h-40 rounded-full border-4 border-slate-100 bg-slate-50 flex items-center justify-center overflow-hidden shadow-inner transition-all group-hover:border-blue-100">
+                                {resumeData.profile_image ? (
+                                  <img src={resumeData.profile_image} alt="Profile" className="w-full h-full object-cover" />
+                                ) : (
+                                  <Camera className="w-12 h-12 text-slate-300 group-hover:text-blue-400 transition-colors" />
+                                )}
+                              </div>
+                              {resumeData.profile_image && (
+                                <button 
+                                  onClick={() => updateResumeData('profile_image', '')}
+                                  className="absolute -top-2 -right-2 bg-red-600 text-white p-2 rounded-full shadow-lg hover:bg-red-700 transition-all"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+
+                            {!resumeData.profile_image ? (
+                              <div 
+                                className={cn(
+                                  "w-full max-w-xl border-2 border-dashed rounded-2xl p-12 transition-all flex flex-col items-center justify-center text-center space-y-4 cursor-pointer",
+                                  isDragging ? "border-blue-600 bg-blue-50/50" : "border-slate-200 hover:border-blue-400 hover:bg-slate-50"
+                                )}
+                                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                                onDragLeave={() => setIsDragging(false)}
+                                onDrop={(e) => {
+                                  e.preventDefault();
+                                  setIsDragging(false);
+                                  const file = e.dataTransfer.files[0];
+                                  if (file && file.type.startsWith('image/')) handleImageUpload(file);
+                                }}
+                                onClick={() => document.getElementById('image-upload')?.click()}
+                              >
+                                <div className="w-16 h-16 rounded-2xl bg-blue-100 flex items-center justify-center">
+                                  <Upload className="w-8 h-8 text-blue-600" />
+                                </div>
+                                <div>
+                                  <h4 className="text-lg font-bold text-slate-900">Drag and drop your photo here</h4>
+                                  <p className="text-sm text-slate-500 font-medium mt-1">or click to browse from your device</p>
+                                </div>
+                                <div className="flex items-center gap-4 text-xs font-bold text-slate-400 pt-4">
+                                  <span>JPG, PNG, GIF</span>
+                                  <span className="w-1 h-1 rounded-full bg-slate-300" />
+                                  <span>Max size 2MB</span>
+                                </div>
+                                <input 
+                                  id="image-upload"
+                                  type="file" 
+                                  className="hidden" 
+                                  accept="image/*"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleImageUpload(file);
+                                  }}
+                                />
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-center gap-4">
+                                <div className="bg-green-50 text-green-700 px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2">
+                                  <CheckCircle2 className="w-4 h-4" /> Image selected successfully
+                                </div>
+                                <button 
+                                  onClick={() => setActiveFormStep(5)}
+                                  className="text-blue-600 font-bold text-sm hover:underline"
+                                >
+                                  Continue to next step →
+                                </button>
+                              </div>
+                            )}
+
+                            {!resumeData.profile_image && (
+                              <div className="flex flex-col items-center gap-4 pt-4">
+                                <p className="text-sm text-slate-400 font-medium">Don&apos;t want to add a photo?</p>
+                                <button 
+                                  onClick={() => setActiveFormStep(5)}
+                                  className="btn-secondary px-8 py-3 text-sm flex items-center gap-2"
+                                >
+                                  Skip & Build Without Image
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {activeFormStep === 5 && (
+                        <div className="space-y-10 py-10 flex flex-col items-center text-center">
+                          <div className="w-20 h-20 rounded-3xl bg-blue-600 flex items-center justify-center shadow-2xl shadow-blue-200">
+                            <Sparkles className="w-10 h-10 text-white" />
+                          </div>
+                          <div className="max-w-md space-y-4">
+                            <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Ready for Optimization?</h2>
+                            <p className="text-slate-600 font-medium leading-relaxed">
                               Review your information and let our AI optimize the wording for maximum professional impact.
                             </p>
                           </div>
                           <div className="flex items-center gap-4">
                             <button 
-                              onClick={() => setActiveFormStep(3)}
+                              onClick={() => setActiveFormStep(4)}
                               className="btn-secondary flex items-center gap-2"
                             >
                               <ChevronLeft className="w-5 h-5" /> Back to Check
@@ -660,7 +862,7 @@ export default function ResumeBuilder() {
                   </AnimatePresence>
                 </div>
 
-                {activeFormStep < 4 && (
+                {activeFormStep < 5 && (
                   <div className="p-8 border-t border-slate-200 flex justify-between items-center bg-slate-50">
                     <button 
                       onClick={() => setActiveFormStep(s => Math.max(0, s - 1))}
