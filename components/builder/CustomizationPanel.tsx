@@ -21,7 +21,7 @@ interface CustomizationPanelProps {
   downloadPDF: () => void;
   setStep: (step: "landing" | "form" | "preview") => void;
   template: string;
-  setTemplate: (template: string) => void;
+  setTemplate: (template: "Modern" | "Professional" | "Creative" | "Minimal") => void;
 }
 
 export function CustomizationPanel({
