@@ -1,91 +1,57 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: oklch(0.1 0.05 250);
-  --color-foreground: oklch(0.98 0.01 250);
-  --color-card: oklch(0.15 0.05 250);
-  --color-card-foreground: oklch(0.98 0.01 250);
-  --color-popover: oklch(0.15 0.05 250);
-  --color-popover-foreground: oklch(0.98 0.01 250);
-  --color-primary: oklch(0.6 0.25 250);
-  --color-primary-foreground: oklch(0.98 0.01 250);
-  --color-secondary: oklch(0.25 0.05 250);
-  --color-secondary-foreground: oklch(0.98 0.01 250);
-  --color-muted: oklch(0.25 0.05 250);
-  --color-muted-foreground: oklch(0.7 0.05 250);
-  --color-accent: oklch(0.6 0.25 250);
-  --color-accent-foreground: oklch(0.98 0.01 250);
-  --color-destructive: oklch(0.6 0.2 20);
-  --color-destructive-foreground: oklch(0.98 0.01 250);
-  --color-border: oklch(0.25 0.05 250);
-  --color-input: oklch(0.25 0.05 250);
-  --color-ring: oklch(0.6 0.25 250);
-  --radius-lg: 1rem;
-  --radius-md: 0.75rem;
-  --radius-sm: 0.5rem;
+  --color-background: #ffffff;
+  --color-foreground: #0f172a;
+  --color-primary: #2563eb;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f8fafc;
+  --color-muted: #64748b;
+  --color-muted-foreground: #94a3b8;
+  --color-accent: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-ring: #3b82f6;
+  --color-destructive: #ef4444;
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
   body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
-    background-image: 
-      radial-gradient(at 0% 0%, oklch(0.2 0.1 250 / 0.15) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, oklch(0.3 0.1 300 / 0.15) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, oklch(0.2 0.1 150 / 0.15) 0px, transparent 50%),
-      radial-gradient(at 0% 100%, oklch(0.3 0.1 200 / 0.15) 0px, transparent 50%);
-    background-attachment: fixed;
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 }
 
-@layer utilities {
-  .glass {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10;
+@layer components {
+  .card-standard {
+    @apply bg-white border border-border rounded-xl shadow-sm;
   }
-  .glass-card {
-    @apply bg-white/5 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)];
+  
+  .btn-primary {
+    @apply bg-primary text-primary-foreground px-6 py-3 rounded-lg font-semibold hover:bg-primary/90 transition-all active:scale-[0.98] disabled:opacity-50;
   }
-  .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-br from-white via-white/90 to-white/60;
+
+  .btn-secondary {
+    @apply bg-secondary text-foreground border border-border px-6 py-3 rounded-lg font-semibold hover:bg-accent transition-all active:scale-[0.98];
   }
-  .animate-float {
-    animation: float 6s ease-in-out infinite;
+
+  .input-standard {
+    @apply w-full bg-white border border-border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-medium;
   }
 }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-
+/* Print Styles */
 @media print {
-  body * {
-    visibility: hidden;
+  body {
+    background: white !important;
   }
-  #resume-content, #resume-content * {
-    visibility: visible;
+  .no-print {
+    display: none !important;
   }
   #resume-content {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: auto !important;
-    background: white !important;
-    color: black !important;
     margin: 0 !important;
-    padding: 20px !important;
+    padding: 0 !important;
     box-shadow: none !important;
-    transform: none !important;
-    border: none !important;
-  }
-  main {
-    background: white !important;
-  }
-  .glass, .glass-card, button, header, nav, .fixed {
-    display: none !important;
+    width: 100% !important;
+    max-width: none !important;
   }
 }
