@@ -37,6 +37,7 @@ interface Project {
   title: string;
   technologies: string;
   highlights: string[];
+  is_current?: boolean;
 }
 
 interface Education {
@@ -44,6 +45,7 @@ interface Education {
   institution: string;
   year: string;
   location: string;
+  is_current?: boolean;
 }
 
 interface ResumeData {
@@ -61,6 +63,7 @@ interface ResumeData {
   awards?: { title: string; issuer: string; year: string }[];
   projects?: Project[];
   education?: Education[];
+  is_beginner?: boolean;
 }
 
 const STEPS = [
@@ -105,10 +108,11 @@ export default function ResumeBuilder() {
     objective: "",
     skills: { "Technical Skills": [], "Soft Skills": [] },
     projects: [{ title: "", technologies: "", highlights: [""] }],
-    education: [{ degree: "", institution: "", year: "", location: "" }],
+    education: [{ degree: "", institution: "", year: "", location: "", is_current: false }],
     languages: [""],
     certifications: [{ name: "", issuer: "", year: "" }],
-    awards: [{ title: "", issuer: "", year: "" }]
+    awards: [{ title: "", issuer: "", year: "" }],
+    is_beginner: false
   });
 
   const [bulkSkills, setBulkSkills] = useState<{ [key: string]: string }>({});
