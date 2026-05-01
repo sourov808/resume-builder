@@ -76,6 +76,8 @@ QUALITY RULES:
 - Ensure all sections are structured correctly.
 - Do NOT hallucinate data.
 - Make sure the response will be full filed with single A4 size page.
+- If user is begginer then make a simple and easy to understand resume.But a valuable and attractive.
+- If user is experienced then make a detailed and professional resume.
 
 IMPORTANT:
 - ALWAYS output the JSON in the SAME response as the completion message.

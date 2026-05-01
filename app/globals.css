@@ -39,17 +39,46 @@
 
 /* Print Styles */
 @media print {
-  body {
+  @page {
+    margin: 0;
+    size: A4;
+  }
+  html, body {
+    width: 210mm !important;
+    height: 297mm !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
     background: white !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
-  .no-print {
-    display: none !important;
+
+  
+  /* Hide all elements by default when printing */
+  body * {
+    visibility: hidden;
   }
-  #resume-content {
+  
+  /* Show only the resume preview and its children */
+  #resume-preview, #resume-preview * {
+    visibility: visible;
+  }
+  
+  /* Position the resume preview at the absolute top-left for printing */
+  #resume-preview {
+    position: absolute;
+    left: 0;
+    top: 0;
     margin: 0 !important;
     padding: 0 !important;
     box-shadow: none !important;
-    width: 100% !important;
-    max-width: none !important;
+    width: 210mm !important;
+    height: 297mm !important;
+    overflow: hidden !important;
+  }
+  
+  .no-print {
+    display: none !important;
   }
 }
